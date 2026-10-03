@@ -15,6 +15,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from weatherbot import costs, dataset, http, prices  # noqa: E402
 
+STABLE = 0.01  # midpoint moved by at most 1 cent over the hour
+ONLY_STABLE = "--all" not in sys.argv
 BUCKETS = [(0.0, 0.03), (0.03, 0.1), (0.1, 0.3), (0.3, 0.5), (0.5, 0.7), (0.7, 0.9), (0.9, 1.0)]
 
 
@@ -40,12 +42,16 @@ def main() -> None:
                 mid = s.at(tr["timestamp"] - 60, max_age=2 * 3600)
                 if mid is None:
                     continue
+                nxt = s.at(tr["timestamp"] + 3600, max_age=3600)  # a point about an hour later
+                stable = nxt is not None and abs(nxt - mid) <= STABLE
+                if ONLY_STABLE and not stable:
+                    continue
                 n_all += 1
                 for lo, hi in BUCKETS:
                     if lo <= mid < hi:
                         diffs[(lo, hi)].append(tr["price"] - mid)
                         sizes[(lo, hi)].append(tr["size"])
-    print(f"{n_all} real taker BUYs of Yes in {len(sample)} sampled test events")
+    print(f"{n_all} real taker BUYs of Yes in {len(sample)} sampled test events"+(" (stable-midpoint hours only)" if ONLY_STABLE else " (all hours)"))
     print(f"{'mid bucket':>11} {'n':>6} {'median paid-mid':>16} {'mean':>8} {'p25':>7} {'p75':>7} | model half-spread: typical  conservative | share of real buys paying LESS than conservative")
     for b in BUCKETS:
         d = np.array(diffs[b])
