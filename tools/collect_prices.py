@@ -39,7 +39,13 @@ def main() -> None:
     test = [e for e in elig if not splits.is_train(e, cut)]
     train = [e for e in elig if splits.is_train(e, cut)]
     train_sample = [e for e in train if zlib.crc32(e["event_id"].encode()) % 3 == 0]
-    todo = sorted(test, key=lambda e: e["target_date"], reverse=True) + sorted(train_sample, key=lambda e: e["target_date"], reverse=True)
+    only = sys.argv[1] if len(sys.argv) > 1 else "all"  # "train" | "test" | "all"
+    if only == "train":
+        todo = sorted(train_sample, key=lambda e: e["target_date"])
+    elif only == "test":
+        todo = sorted(test, key=lambda e: e["target_date"], reverse=True)
+    else:
+        todo = sorted(test, key=lambda e: e["target_date"], reverse=True) + sorted(train_sample, key=lambda e: e["target_date"], reverse=True)
     print(f"eligible {len(elig)}; cut date {cut}; test {len(test)}; train {len(train)} (sampled {len(train_sample)})", flush=True)
     done = 0
     with ThreadPoolExecutor(WORKERS) as ex:

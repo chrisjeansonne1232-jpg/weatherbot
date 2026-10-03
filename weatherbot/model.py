@@ -141,19 +141,19 @@ class ResidualModel:
         self._pool_cache[key] = out
         return out
 
-    def params(self, icao: str, dtype: str, T: datetime) -> tuple[float, float, float]:
-        """(bias, beta, sigma) for a decision at time T using only data visible before T."""
+    def params(self, icao: str, dtype: str, T: datetime) -> tuple[float, float, float, int]:
+        """(bias, beta, sigma, n_days) for a decision at time T using only data visible before T."""
         pb, beta, ps, pn = self._pool(dtype, T)
         rows = self._window(icao, dtype, T)
         n = len(rows)
         if n == 0:
-            return pb, beta, ps
+            return pb, beta, ps, 0
         r = np.array([x.r for x in rows])
         A = np.array([x.A for x in rows])
         bias = (float((r - beta * A).sum()) + PRIOR_K * pb) / (n + PRIOR_K)
         e = r - bias - beta * A
         var = (float((e * e).sum()) + PRIOR_K * ps * ps) / (n + PRIOR_K)
-        return bias, beta, math.sqrt(max(var, 0.0625))
+        return bias, beta, math.sqrt(max(var, 0.0625)), n
 
 
 def threshold_c(k: float, unit: str) -> float:

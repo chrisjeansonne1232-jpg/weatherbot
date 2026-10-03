@@ -23,6 +23,7 @@ from .dataset import StationData, load_series, ts
 from .fees import WEATHER_FEE, ZERO_FEE, FeeModel
 
 KAPPAS = (0.9, 1.0, 1.15, 1.3, 1.5)
+MIN_HISTORY_DAYS = 10
 
 
 @dataclass
@@ -64,7 +65,9 @@ def prep_event(ev: dict, sd: StationData, rm: model.ResidualModel, dtypes, df: f
         mids = np.array(mids)
         if mids.sum() <= 0:
             continue
-        bias, beta, sigma = rm.params(sd.icao, dt, snap.T)
+        bias, beta, sigma, n_hist = rm.params(sd.icao, dt, snap.T)
+        if n_hist < MIN_HISTORY_DAYS:
+            continue  # not enough completed days to trust this station's error statistics
         q = {}
         for k in kappas:
             p = model.bracket_probs(ev["brackets"], sd.unit, snap, bias, beta, sigma, kappa=k, df=df)
@@ -275,3 +278,38 @@ def random_baseline(preps, st: Strategy, strat_trades: list[Trade], seeds: int =
         pe = per_event(tr)
         per_evt.append(sum(pe.values()) / len(pe) if pe else 0.0)
     return float(np.mean(nets)), float(np.std(nets)), float(np.mean(per_evt))
+
+
+# ---------------------------------------------------------------- model-vs-market scoring
+
+def log_losses(preps: list[EventPrep], kappa: float, dtypes=None):
+    """Mean log-loss on the official winner: model vs the market's normalised midpoint (lower is better)."""
+    acc: dict[str, list] = {}
+    for p in preps:
+        for s in p.snaps:
+            if dtypes and s.dtype not in dtypes:
+                continue
+            m = max(float(s.q[kappa][p.win]), 1e-4)
+            k = max(float(s.mid_norm[p.win]), 1e-4)
+            a = acc.setdefault(s.dtype, [0.0, 0.0, 0])
+            a[0] += -math.log(m)
+            a[1] += -math.log(k)
+            a[2] += 1
+    return {d: (a[0] / a[2], a[1] / a[2], a[2]) for d, a in acc.items()}
+
+
+def passes_bar(test_summary: Summary, test_days: list[str], last_week: Summary) -> list[tuple[str, bool, str]]:
+    span = (date.fromisoformat(max(test_days)) - date.fromisoformat(min(test_days))).days + 1
+    checks = [
+        ("at least 200 traded events in the unseen period", test_summary.n_events_traded >= 200,
+         f"{test_summary.n_events_traded} traded events"),
+        ("unseen period spans at least 14 days", span >= 14, f"{span} days"),
+        ("profitable after fees", test_summary.net > 0, f"net ${test_summary.net:,.2f}"),
+        ("per-event 95% range above zero (events resampled)", test_summary.ci_event[0] > 0,
+         f"[{test_summary.ci_event[0]:+.3f}, {test_summary.ci_event[1]:+.3f}] per event"),
+        ("per-event 95% range above zero (whole days resampled)", test_summary.ci_date[0] > 0,
+         f"[{test_summary.ci_date[0]:+.3f}, {test_summary.ci_date[1]:+.3f}] per event"),
+        ("still profitable in the most recent 7 days", last_week.net > 0 and last_week.n_events_traded > 0,
+         f"net ${last_week.net:,.2f} over {last_week.n_events_traded} events"),
+    ]
+    return checks
