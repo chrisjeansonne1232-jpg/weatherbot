@@ -1,4 +1,4 @@
-"""Step 3: download hourly midpoint price history for every bracket (Yes token) of every eligible event.
+"""Step 3: download 5-minute midpoint price history for every bracket (Yes token) of every eligible event.
 
 Newest events first (the unseen test period), then the training period at 1-in-3 sampling
 (settings are chosen on training; they do not need every event). Resumable: everything is cached.
@@ -26,7 +26,7 @@ def fetch_event(e: dict) -> int:
     end = int((iso(e["end_date"]) + timedelta(hours=48)).timestamp())
     n = 0
     for b in e["brackets"]:
-        prices.price_history(b["yes_token"], start, end, 60)
+        prices.price_history(b["yes_token"], start, end)
         n += 1
     return n
 

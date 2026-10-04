@@ -60,14 +60,22 @@ def fmt(s: bt.Summary) -> str:
 
 
 def tune(train, verbose=True):
-    grid = dict(kappa=[1.0, 1.15, 1.3], buffer=[0.02, 0.04, 0.06, 0.09], blend=[1.0, 0.7],
+    grid = dict(kappa=[1.0, 1.15, 1.3], buffer=[0.04, 0.06, 0.09, 0.12, 0.15], blend=[1.0, 0.7, 0.5, 0.3],
                 dtypes=[ALL_DTYPES, ("d3", "d2", "d1"), ("s9", "s11", "s13", "s15")])
+    days = sorted({p.day for p in train})
+    mid_day = days[len(days) // 2]
+    first_half = [p for p in train if p.day < mid_day]
+    second_half = [p for p in train if p.day >= mid_day]
     results = []
     for k, b, w, d in itertools.product(grid["kappa"], grid["buffer"], grid["blend"], grid["dtypes"]):
         st = bt.Strategy(kappa=k, buffer=b, blend=w, dtypes=d)
         s = bt.summarize(train, bt.simulate(train, st))
-        # conservative score: lower end of the per-event range; needs a real sample of events
-        score = s.ci_event[0] if s.n_events_traded >= 150 else -9.0
+        h1 = bt.summarize(first_half, bt.simulate(first_half, st))
+        h2 = bt.summarize(second_half, bt.simulate(second_half, st))
+        # score = lower end of the per-event range over all of train, but only if the setting
+        # also made money in BOTH the earlier and the later half of the training period
+        ok = s.n_events_traded >= 150 and h1.mean_event_pnl > 0 and h2.mean_event_pnl > 0
+        score = s.ci_event[0] if ok else -9.0
         results.append((score, st, s))
         if verbose:
             print(f"train kappa={k} buf={b} blend={w} dtypes={','.join(d) if len(d)<7 else 'all'}: {fmt(s)}", flush=True)

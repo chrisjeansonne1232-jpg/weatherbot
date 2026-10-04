@@ -24,6 +24,7 @@ from .fees import WEATHER_FEE, ZERO_FEE, FeeModel
 
 KAPPAS = (0.9, 1.0, 1.15, 1.3, 1.5)
 MIN_HISTORY_DAYS = 10
+PRICE_MAX_AGE = 15 * 60  # refuse a midpoint older than 15 minutes at decision time
 
 
 @dataclass
@@ -34,6 +35,7 @@ class Snap:
     mid_norm: np.ndarray
     q: dict  # (kappa) -> np.ndarray of model probabilities
     ask: dict  # cost_mode -> (ask_yes array, ask_no array)
+    ask_next: dict  # same, priced off the first midpoint AFTER the decision (pessimistic-fill sensitivity)
 
 
 @dataclass
@@ -59,7 +61,7 @@ def prep_event(ev: dict, sd: StationData, rm: model.ResidualModel, dtypes, df: f
         if snap.R is None:
             continue
         T = ts(snap.T)
-        mids = [s.at(T) for s in series]
+        mids = [s.at(T, max_age=PRICE_MAX_AGE) for s in series]
         if any(m is None for m in mids):
             continue
         mids = np.array(mids)
@@ -75,12 +77,15 @@ def prep_event(ev: dict, sd: StationData, rm: model.ResidualModel, dtypes, df: f
                 break
             q[k] = np.array(p)
         else:
-            ask = {}
+            nxt = [s.after(T) for s in series]
+            mids2 = np.array([a if a is not None else m for a, m in zip(nxt, mids)])
+            ask, ask2 = {}, {}
             for mode in ("conservative", "typical"):
-                ay = np.array([costs.ask_prices(m, tk, mode)[0] for m, tk in zip(mids, ticks)])
-                an = np.array([costs.ask_prices(m, tk, mode)[1] for m, tk in zip(mids, ticks)])
-                ask[mode] = (ay, an)
-            prep.snaps.append(Snap(dt, T, mids, mids / mids.sum(), q, ask))
+                for tgt, mm in ((ask, mids), (ask2, mids2)):
+                    ay = np.array([costs.ask_prices(m, tk, mode)[0] for m, tk in zip(mm, ticks)])
+                    an = np.array([costs.ask_prices(m, tk, mode)[1] for m, tk in zip(mm, ticks)])
+                    tgt[mode] = (ay, an)
+            prep.snaps.append(Snap(dt, T, mids, mids / mids.sum(), q, ask, ask2))
     return prep if prep.snaps else None
 
 
@@ -97,6 +102,7 @@ class Strategy:
     max_outlay: float = 25.0
     cost_mode: str = "conservative"
     sides: str = "YN"
+    fill: str = "normal"  # "pessimistic" = pay the worse of the ask at T and at the next midpoint
 
 
 @dataclass
@@ -132,6 +138,9 @@ def simulate(preps: list[EventPrep], st: Strategy, fee_model: FeeModel = WEATHER
             if s.dtype not in st.dtypes:
                 continue
             ay, an = s.ask[st.cost_mode]
+            if st.fill == "pessimistic":
+                ay2, an2 = s.ask_next[st.cost_mode]
+                ay, an = np.maximum(ay, ay2), np.maximum(an, an2)
             if picker is None:
                 q = st.blend * s.q[st.kappa] + (1.0 - st.blend) * s.mid_norm
                 cands = []

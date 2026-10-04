@@ -84,7 +84,8 @@ def _prep(win=1, q=(0.2, 0.7, 0.1), mid=(0.3, 0.4, 0.3)):
     mid = np.array(mid)
     ay = np.array([costs.ask_prices(m, 0.001)[0] for m in mid])
     an = np.array([costs.ask_prices(m, 0.001)[1] for m in mid])
-    s = backtest.Snap("d1", 0.0, mid, mid / mid.sum(), {1.15: np.array(q)}, {"conservative": (ay, an), "typical": (ay, an)})
+    asks = {"conservative": (ay, an), "typical": (ay, an)}
+    s = backtest.Snap("d1", 0.0, mid, mid / mid.sum(), {1.15: np.array(q)}, asks, asks)
     return backtest.EventPrep({"event_id": "x"}, "2026-07-10", win, len(q), [s])
 
 

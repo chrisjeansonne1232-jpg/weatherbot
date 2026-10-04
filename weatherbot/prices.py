@@ -11,9 +11,10 @@ from . import http
 
 CLOB = "https://clob.polymarket.com"
 DATA_API = "https://data-api.polymarket.com"
+PRICE_FIDELITY_MIN = 5  # 5-minute points: hourly points were up to an hour stale at decision time
 
 
-def price_history(token_id: str, start_ts: int, end_ts: int, fidelity_min: int = 60) -> list[tuple[int, float]]:
+def price_history(token_id: str, start_ts: int, end_ts: int, fidelity_min: int = PRICE_FIDELITY_MIN) -> list[tuple[int, float]]:
     """[(unix_ts, midpoint)] for one outcome token, oldest first."""
     d = http.get(CLOB + "/prices-history", {"market": token_id, "startTs": int(start_ts), "endTs": int(end_ts),
                                             "fidelity": int(fidelity_min)})

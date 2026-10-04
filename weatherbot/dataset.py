@@ -113,6 +113,16 @@ class Series:
         return self.p[i]
 
 
+def _after(self, when: float, max_wait: float = 10 * 60) -> float | None:
+    i = bisect.bisect_right(self.t, when)
+    if i >= len(self.t) or self.t[i] - when > max_wait:
+        return None
+    return self.p[i]
+
+
+Series.after = _after  # type: ignore[attr-defined]
+
+
 def load_series(e: dict) -> list[Series] | None:
     if not e.get("start_date") or not e.get("end_date"):
         return None  # a handful of Gamma events have no trading start date: skip them
@@ -121,8 +131,8 @@ def load_series(e: dict) -> list[Series] | None:
     out = []
     for b in e["brackets"]:
         if not http.cached_only(prices.CLOB + "/prices-history", {"market": b["yes_token"], "startTs": start,
-                                                                   "endTs": end, "fidelity": 60}):
+                                                                   "endTs": end, "fidelity": prices.PRICE_FIDELITY_MIN}):
             return None
-        h = prices.price_history(b["yes_token"], start, end, 60)
+        h = prices.price_history(b["yes_token"], start, end)
         out.append(Series([x[0] for x in h], [x[1] for x in h]))
     return out

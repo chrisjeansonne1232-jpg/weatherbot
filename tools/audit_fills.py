@@ -33,7 +33,7 @@ def main() -> None:
             start = int(datetime.fromisoformat(e["start_date"].replace("Z", "+00:00")).timestamp()) - 3600
             end = int((datetime.fromisoformat(e["end_date"].replace("Z", "+00:00")) + timedelta(hours=48)).timestamp())
             for b in e["brackets"]:
-                prices.price_history(b["yes_token"], start, end, 60)
+                prices.price_history(b["yes_token"], start, end)
             series = dataset.load_series(e)
         for br, s in zip(e["brackets"], series):
             for tr in toks[br["yes_token"]]:
