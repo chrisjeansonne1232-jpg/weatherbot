@@ -29,7 +29,7 @@ USER_AGENT = "weatherbot-paper-research/0.1 (read-only research; contact: github
 # seconds between two requests to the same host
 MIN_GAP = {
     "gamma-api.polymarket.com": 0.25,
-    "clob.polymarket.com": 0.12,
+    "clob.polymarket.com": 0.05,
     "data-api.polymarket.com": 0.35,
     "previous-runs-api.open-meteo.com": 4.0,
     "historical-forecast-api.open-meteo.com": 4.0,
