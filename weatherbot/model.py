@@ -23,14 +23,15 @@ from . import resolve
 from .dataset import FINAL_LAG, StationData, ts
 
 # decision type -> (forecast vintage in days, hours after local midnight)
-DECISIONS: dict[str, tuple[int, int]] = {
+DECISIONS: dict[str, tuple[int, float]] = {
     "d3": (3, -41),  # ~2 days before the local day, earliest legal time for 3-day-old runs
     "d2": (2, -17),  # the day before
     "d1": (1, 7),  # morning of the day
-    "s9": (1, 9),
-    "s11": (1, 11),
-    "s13": (1, 13),
-    "s15": (1, 15),
+    # same-day decisions sit 15 minutes past the hour so the hourly :51 METAR is already visible
+    "s9": (1, 9.25),
+    "s11": (1, 11.25),
+    "s13": (1, 13.25),
+    "s15": (1, 15.25),
 }
 DEFAULT_SIGMA = {"d3": 2.4, "d2": 2.0, "d1": 1.6, "s9": 1.4, "s11": 1.1, "s13": 0.8, "s15": 0.5}
 WINDOW_DAYS = 45

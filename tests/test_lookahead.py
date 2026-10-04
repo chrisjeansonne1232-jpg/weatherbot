@@ -50,7 +50,7 @@ def test_observations_after_decision_time_are_invisible():
     sd = fake_station(pts)
     M, idx = sd.observed_so_far(S, T)
     assert all(sd.obs_ts[i] <= ts(T) - OBS_LAG.total_seconds() for i in idx)
-    # 11:51 is only 9 minutes before T (inside the 15-minute publication lag): latest visible is 10:51
+    # 11:51 is only 9 minutes before T (inside the 10-minute publication lag): latest visible is 10:51
     assert M == 30.0
     # a report 5 minutes before T is not visible yet ...
     sd2 = fake_station(sorted(pts + [(T - timedelta(minutes=5), 99.0)], key=lambda p: p[0]))

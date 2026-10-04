@@ -2,7 +2,7 @@
 
 Look-ahead guards (each one is also covered by tests/):
   * a decision at time T sees only: forecasts public by T (vintage rule in forecast.py), METARs
-    timestamped <= T - 15 min, the market midpoint from the last history point at or before T,
+    timestamped <= T - 10 min, the market midpoint from the last history point at or before T,
     and error statistics learned from days that had fully finished (+1h) before T.
   * the price paid is the MODELLED ASK at time T (midpoint + measured spread), never a close/mid
     from a later time, never the midpoint itself.

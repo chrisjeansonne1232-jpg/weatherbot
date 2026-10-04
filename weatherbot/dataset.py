@@ -16,7 +16,7 @@ from . import forecast, http, obs as obsmod, prices, resolve, splits
 
 UTC = timezone.utc
 HOUR = 3600
-OBS_LAG = timedelta(minutes=15)  # a report is treated as visible 15 minutes after its timestamp
+OBS_LAG = timedelta(minutes=10)  # a report is treated as visible 10 minutes after its timestamp
 OBS_FIRST, OBS_LAST = date(2025, 12, 28), date(2026, 10, 5)  # exactly what tools/collect_obs.py fetched
 FINAL_LAG = timedelta(hours=1)  # a finished local day's last report is visible 1 hour after midnight
 

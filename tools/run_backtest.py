@@ -135,11 +135,28 @@ def report(train, test, best, excluded, cut, out_dir: Path):
     P(f"- Always buy the market favourite (Yes): net ${SF.net:,.2f} on {SF.n_trades} trades, ${SF.mean_event_pnl:+.3f} per event "
       f"[{SF.ci_event[0]:+.3f}, {SF.ci_event[1]:+.3f}]")
     P(f"- Random picks (same count per decision time, 20 draws): net ${rnd_net:,.2f} +/- {rnd_sd:,.2f}, ${rnd_pe:+.3f} per event\n")
-    P("## Cost sensitivity\n")
-    for mode in ("conservative", "typical"):
-        sm = bt.summarize(test, bt.simulate(test, replace(best, cost_mode=mode)))
-        P(f"- {mode} spread: net ${sm.net:,.2f}, ${sm.mean_event_pnl:+.3f} per event "
+    P("\n## Execution sensitivity (same events and setting)\n")
+    for label, st2 in (("conservative spread (the headline numbers)", best),
+                       ("typical (median) spread", replace(best, cost_mode="typical")),
+                       ("pessimistic fill: worse of the ask now and at the next 5-minute point", replace(best, fill="pessimistic")),
+                       ("pessimistic fill with 5 shares instead of 10", replace(best, fill="pessimistic", shares=5.0))):
+        sm = bt.summarize(test, bt.simulate(test, st2))
+        P(f"- {label}: net ${sm.net:,.2f}, ${sm.mean_event_pnl:+.3f} per event "
           f"[{sm.ci_event[0]:+.3f}, {sm.ci_event[1]:+.3f}] ({sm.n_trades} trades)")
+    P("\n## Is the profit broad or a few lucky events?\n")
+    pe = np.array(sorted(bt.per_event(tr).values()))
+    if len(pe):
+        k = max(int(len(pe) * 0.05), 1)
+        top = pe[-k:].sum()
+        P(f"- Share of traded events that made money: {100*(pe>0).mean():.0f}%; median event P&L ${np.median(pe):+.2f}")
+        P(f"- Best 5% of events ({k} events) account for {100*top/pe.sum() if pe.sum() else float('nan'):.0f}% of net P&L; "
+          f"net P&L without them: ${pe.sum()-top:,.2f}")
+    P("\n## Results by month and by resolution source\n")
+    P("| group | trades | win % | net $ | return |\n|---|---|---|---|---|")
+    for k2, n, w, net, g, cost in bt.breakdown(tr, lambda t: t.day[:7]):
+        P(f"| {k2} | {n} | {100*w/n:.0f}% | {net:,.2f} | {100*net/cost:+.1f}% |")
+    for k2, n, w, net, g, cost in bt.breakdown(tr, lambda t: test[t.ev].ev["source_kind"]):
+        P(f"| source: {k2} | {n} | {100*w/n:.0f}% | {net:,.2f} | {100*net/cost:+.1f}% |")
     P("\n## Is the model better than the market? (log-loss on the official winner, lower = better)\n")
     P("| decision | model | market | events |\n|---|---|---|---|")
     ll = bt.log_losses(test, best.kappa)
