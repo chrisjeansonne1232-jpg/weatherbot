@@ -32,7 +32,7 @@ def load_everything():
     return elig, meta, cut, excluded
 
 
-def build(elig, meta, cut, df=8.0):
+def build(elig, meta, cut, df=8.0, include_test=True):
     first = date.fromisoformat(min(e["target_date"] for e in elig))
     last = date.fromisoformat(max(e["target_date"] for e in elig))
     units = {}
@@ -44,6 +44,8 @@ def build(elig, meta, cut, df=8.0):
     rm = model.ResidualModel(stations)
     train, test = [], []
     for e in elig:
+        if not include_test and not splits.is_train(e, cut):
+            continue  # train-only run: the held-out period is never even prepared
         p = bt.prep_event(e, stations[e["station"]], rm, ALL_DTYPES, df=df)
         if p is None:
             continue
@@ -149,7 +151,7 @@ def main() -> None:
     elig, meta, cut, excluded = load_everything()
     print(f"cut date {cut}; usable events {len(elig)}; excluded groups: " +
           ", ".join(f"{k[0]}/{k[1]} ({v[0]}/{v[1]})" for k, v in sorted(excluded.items())))
-    train, test = build(elig, meta, cut)
+    train, test = build(elig, meta, cut, include_test="--train-only" not in sys.argv)
     print(f"prepared train {len(train)} events, test {len(test)} events", flush=True)
     results = tune(train)
     best = results[0][1]
