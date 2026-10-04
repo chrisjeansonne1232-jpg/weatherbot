@@ -20,6 +20,8 @@ from datetime import date, datetime, timedelta, timezone
 from . import http
 
 PREV = "https://previous-runs-api.open-meteo.com/v1/forecast"
+ARCHIVE_START = date(2025, 12, 27)  # fixed so every caller hits the same cache chunks
+ARCHIVE_END = date(2026, 10, 4)
 MODELS = ("ecmwf_ifs025", "gfs_seamless", "icon_seamless")
 LEADS = (1, 2, 3)
 PUBLISH_DELAY_H = 8  # conservative: runs are normally public 4-7 hours after initialisation
@@ -41,7 +43,7 @@ def _chunks(start: date, end: date, days: int = 92):
 
 
 def fetch_previous_runs(lat: float, lon: float, elevation: float, start: date, end: date,
-                        models=MODELS, leads=LEADS) -> dict[tuple[str, int], dict[datetime, float]]:
+                        models=MODELS, leads=LEADS, offline: bool = False) -> dict[tuple[str, int], dict[datetime, float]]:
     """{(model, lead_days): {utc_hour: temp_C}} for [start, end] (inclusive)."""
     out: dict[tuple[str, int], dict[datetime, float]] = {}
     for a, b in _chunks(start, end):
@@ -50,7 +52,7 @@ def fetch_previous_runs(lat: float, lon: float, elevation: float, start: date, e
             "hourly": ",".join(f"temperature_2m_previous_day{n}" for n in leads),
             "models": ",".join(models), "start_date": a.isoformat(), "end_date": b.isoformat(),
             "timezone": "UTC", "temperature_unit": "celsius",
-        })
+        }, offline=offline)
         h = d["hourly"]
         times = [datetime.fromisoformat(t).replace(tzinfo=timezone.utc) for t in h["time"]]
         for k, vals in h.items():

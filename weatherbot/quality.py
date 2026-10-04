@@ -21,7 +21,7 @@ def agreement(events: list[dict], meta: dict) -> dict[tuple[str, str], tuple[int
     for e in events:
         st = e["station"]
         if st not in cache:
-            cache[st] = obs.fetch_obs(st, date(2025, 12, 28), date(2026, 10, 5))
+            cache[st] = obs.fetch_obs(st, date(2025, 12, 28), date(2026, 10, 5), offline=True)
         win = next(i for i, b in enumerate(e["brackets"]) if (b["final_yes"] or 0) > 0.99)
         m, _ = resolve.daily_max(cache[st], meta[st]["tz"], date.fromisoformat(e["target_date"]), e["unit"])
         ok = m is not None and resolve.bracket_index(e["brackets"], m) == win

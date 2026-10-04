@@ -17,6 +17,7 @@ from . import forecast, http, obs as obsmod, prices, resolve, splits
 UTC = timezone.utc
 HOUR = 3600
 OBS_LAG = timedelta(minutes=15)  # a report is treated as visible 15 minutes after its timestamp
+OBS_FIRST, OBS_LAST = date(2025, 12, 28), date(2026, 10, 5)  # exactly what tools/collect_obs.py fetched
 FINAL_LAG = timedelta(hours=1)  # a finished local day's last report is visible 1 hour after midnight
 
 
@@ -29,12 +30,13 @@ class StationData:
 
     def __init__(self, icao: str, meta: dict, unit: str, first: date, last: date):
         self.icao, self.meta, self.unit, self.tz = icao, meta, unit, meta["tz"]
-        self.obs = obsmod.fetch_obs(icao, first - timedelta(days=2), last + timedelta(days=2))
+        # fixed archive ranges + offline=True: the backtest never makes a network call
+        self.obs = obsmod.fetch_obs(icao, OBS_FIRST, OBS_LAST, offline=True)
         self.obs_ts = [ts(o.utc) for o in self.obs]
         self.obs_c = [o.temp_c() for o in self.obs]
         self.obs_read = [resolve.reading(o, unit, "tenths") for o in self.obs]
         raw = forecast.fetch_previous_runs(meta["lat"], meta["lon"], meta["elevation"],
-                                           first - timedelta(days=2), last + timedelta(days=1))
+                                           forecast.ARCHIVE_START, forecast.ARCHIVE_END, offline=True)
         # lead -> epoch-hour -> mean over models; also model count and spread
         self.fc: dict[int, dict[int, float]] = {}
         self.fc_n: dict[int, dict[int, int]] = {}

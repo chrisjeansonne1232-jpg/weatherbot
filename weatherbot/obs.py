@@ -64,7 +64,7 @@ def _month_chunks(start: date, end: date):
         d = nxt
 
 
-def fetch_obs(icao: str, start: date, end: date) -> list[Obs]:
+def fetch_obs(icao: str, start: date, end: date, offline: bool = False) -> list[Obs]:
     """All routine+special METARs for `icao` with UTC time in [start, end)."""
     iem_id = icao[1:] if icao.startswith("K") and len(icao) == 4 else icao
     out: list[Obs] = []
@@ -79,7 +79,7 @@ def fetch_obs(icao: str, start: date, end: date) -> list[Obs]:
             ("missing", "M"), ("trace", "T"), ("direct", "no"),
             ("report_type", 3), ("report_type", 4),
         ]
-        text = http.get(ASOS, params, as_text=True)  # list of tuples handled by requests
+        text = http.get(ASOS, params, as_text=True, offline=offline)
         out.extend(_parse_csv(text))
     out.sort(key=lambda o: o.utc)
     return out

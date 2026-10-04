@@ -77,7 +77,8 @@ def cached_only(url: str, params: dict | None = None) -> bool:
     return _path(host, _key(url, params)).exists()
 
 
-def get(url: str, params: dict | None = None, *, as_text: bool = False, retries: int = 4, timeout: float = 60.0):
+def get(url: str, params: dict | None = None, *, as_text: bool = False, retries: int = 4, timeout: float = 60.0,
+        offline: bool = False):
     """GET `url` (cached). Returns parsed JSON, or text if as_text=True."""
     host = urlparse(url).netloc
     key = _key(url, params)
@@ -85,6 +86,8 @@ def get(url: str, params: dict | None = None, *, as_text: bool = False, retries:
     if p.exists():
         raw = gzip.decompress(p.read_bytes()).decode("utf-8")
         return raw if as_text else json.loads(raw)
+    if offline:
+        raise FetchError(f"not in cache (offline mode, no network call made): {url} {params}")
     if host in _blocked_hosts:
         raise RateLimited(f"{host} blocked this run: {_blocked_hosts[host]}")
 

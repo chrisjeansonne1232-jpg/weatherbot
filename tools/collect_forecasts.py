@@ -12,7 +12,7 @@ from weatherbot import forecast, http  # noqa: E402
 def main() -> None:
     meta = json.loads((http.DATA_DIR / "stations.json").read_text())
     skip = set(sys.argv[1:])  # stations to skip
-    start, end = date(2025, 12, 27), date(2026, 10, 4)
+    start, end = forecast.ARCHIVE_START, forecast.ARCHIVE_END
     for i, icao in enumerate(sorted(meta), 1):
         if icao in skip:
             continue
