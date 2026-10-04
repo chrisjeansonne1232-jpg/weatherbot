@@ -34,7 +34,7 @@ def fetch_event(e: dict) -> int:
 def main() -> None:
     events = json.loads((http.DATA_DIR / "events.json").read_text())
     stations = json.loads((http.DATA_DIR / "stations.json").read_text())
-    elig = splits.eligible(events, stations)
+    elig = [e for e in splits.eligible(events, stations) if e.get("start_date") and e.get("end_date")]
     cut = splits.freeze_split(elig)
     test = [e for e in elig if not splits.is_train(e, cut)]
     train = [e for e in elig if splits.is_train(e, cut)]

@@ -114,6 +114,8 @@ class Series:
 
 
 def load_series(e: dict) -> list[Series] | None:
+    if not e.get("start_date") or not e.get("end_date"):
+        return None  # a handful of Gamma events have no trading start date: skip them
     start = int(datetime.fromisoformat(e["start_date"].replace("Z", "+00:00")).timestamp()) - 3600
     end = int((datetime.fromisoformat(e["end_date"].replace("Z", "+00:00")) + timedelta(hours=48)).timestamp())
     out = []
