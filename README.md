@@ -5,7 +5,27 @@ markets. No real money, no order placement, no keys. Same honesty rules as
 polybot: simulated taker fills against the real book, fees included, results
 judged after fees with a train/test split.
 
-## Status: paused after research (2026-10-03)
+## Status: Stage 1 backtest finished (2026-10-04): FAIL, live bot not built
+
+Full plain-English write-up: [`reports/STAGE1_VERDICT.md`](reports/STAGE1_VERDICT.md).
+Tables: `reports/stage1_results.md`. Fill-realism audit: `reports/fill_audit.txt`.
+
+Headline: 5 of the 6 pass-bar tests passed on paper (+$759, +$0.30 per event, 2,494 unseen events),
+but it failed "still holding in the most recent week" (-$73), the profit comes from a few lucky
+events, it shrinks to +$0.05 per event under a harsher fill assumption, and the model scores worse
+than the market's own prices at every decision time.
+
+Corrections to the research notes below (found from live data):
+- NOAA `weather.gov` resolution only began 2026-08-23. Dec 2025 - Aug 2026 events resolved on
+  Weather Underground airport history pages.
+- Early events had 7 or 9 brackets, not always 11.
+- Hong Kong, Tel Aviv, Istanbul, Moscow resolve on national weather services (no airport station).
+- `prices-history` is the bid/ask *midpoint*, not a fill price; no historical order books exist.
+- Open-Meteo `previous-runs` works (after the daily limit resets) and is used with an explicit
+  forecast-vintage rule; no ensemble archive exists, so the model uses a 3-model mean plus a
+  learned per-station error distribution.
+
+## Earlier status: paused after research (2026-10-03)
 
 ### How the markets work (verified from live Gamma data)
 - One event per city per day, e.g. `highest-temperature-in-nyc-on-october-3-2026`,
